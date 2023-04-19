@@ -2,7 +2,6 @@ import {useEffect, useState} from "react";
 import {useParams} from "react-router-dom";
 import {Link} from 'react-router-dom';
 import "../App.css"
-import Navbar from "./Navbar";
 import Comments from "./Comments";
 
 const PostPage = () => {
@@ -26,6 +25,7 @@ const PostPage = () => {
       <div>
       </div>
       <div className="post-section">
+<img src={'http://localhost:3001/'+postInfo.cover} alt=""/>
         <h1 class="post-heading">{postInfo.content}</h1>  
         <p class="post-content">{postInfo.blog}</p>
     </div>

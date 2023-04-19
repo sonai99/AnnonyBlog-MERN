@@ -12,7 +12,9 @@ const {Schema,model} = mongoose;
 const port = process.env.PORT;
 const DB = process.env.MONGO_URL;
 const secret = process.env.JWT_SECRET;
-
+const multer = require('multer');
+const uploadMiddleware = multer({ dest: 'uploads/' });
+const fs = require('fs');
 
 app.use(cors({
   origin: 'http://localhost:3000',
@@ -20,47 +22,13 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.use('/uploads', express.static(__dirname + '/uploads'));
 require('./db/connection.js')
 
 const User = require('./schema/userSchema.js')
 const Post = require('./schema/postSchema.js')
 const Comment = require('./schema/commentSchema.js')
 
-
-// ### - Create new Mongoose Schema - ###
-
-// const userSchema = new mongoose.Schema({
-//   username: String,
-//   email: String,
-//   password: String,
-// },
-// { timestamps: true });
-
-// const User = mongoose.model("User", userSchema);
-
-
-// const postSchema = new mongoose.Schema({
-//   summary : String,
-//   content : String,
-//   blog : String,
-//   likeCount: {
-//     type: Number,
-//     default: 0,
-// },
-//   author:{type:Schema.Types.ObjectId, ref:'User'},
-//   comments: [{ type: Schema.Types.ObjectId, ref: 'Comment' }]
-// }, { timestamps: true});
-
-// const Post = mongoose.model("Post", postSchema);
-
-// const commentSchema = new mongoose.Schema({
-//   comment: String,
-// }, {
-//   timestamps: true,
-//   post: { type: Schema.Types.ObjectId, ref: 'Post' }
-// });
-
-// const Comment = mongoose.model("Comment", commentSchema);
 
 
 
@@ -84,16 +52,6 @@ app.get('/getUsers/:id', async (req,res)=>{
 
 
 
-app.put('/updateUsers/:id', async (req,res)=>{
-
-  const updatedUser = await User.findByIdAndUpdate(
-    req.params.id, // ID of the user to update
-    req.body, // Data to update
-    { new: true } // Return the updated document
-  );
-  res.json(updatedUser)
-})
-
 const salt = bcrypt.genSaltSync(10);
 
 // // ### - Create User posts new user in DB - ###
@@ -109,8 +67,6 @@ app.post("/createUser", async (req, res) => {
         return res.status(422).json({error:"User already Exists"});
       }
       else{    
-        // const user = new User({ username, email, password });
-        // await user.save();
         const user = await User.create({username, email, password:bcrypt.hashSync(password,salt)});
         res.status(201).json({ message: "User created successfully" });
       }
@@ -122,11 +78,18 @@ app.post("/createUser", async (req, res) => {
 
 // ### - Create posts in DB using postSchema - ###
 
-app.post('/createPost', async (req,res)=>{
+app.post('/createPost', uploadMiddleware.single('file'), async (req,res)=>{
+  const {originalname,path} = req.file;
+  const parts = originalname.split('.');
+  const ext = parts[parts.length - 1];
+  const newPath = path+'.'+ext;
+  fs.renameSync(path, newPath);
+
   const {summary, content, blog} = req.body;
     const postDoc = await Post.create({
       summary,
       content,
+      cover:newPath,
       blog,
     });
   res.json(postDoc);
@@ -166,9 +129,6 @@ app.get('/post/:id/comment', async (req,res) => {
 })
 
 
-
-
-
 // // ### - Login - ###
   
 app.post('/login', async (req,res)=>{
@@ -195,12 +155,6 @@ app.get('/profile', (req,res) => {
     res.json(info);
   });
 });
-
-// // ### - Delete User posts new user in DB - ###
-app.delete('/updateUsers/:id', async (req,res)=>{
-  const deletedUser = await User.deleteOne({_id: req.params.id})
-  res.json(deletedUser)
-})
 
 
 
